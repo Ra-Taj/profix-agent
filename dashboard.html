@@ -5,28 +5,37 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ProFix — Dashboard</title>
 <style>
+  :root {
+    --gold: #d4af37;
+    --gold-light: #f1d878;
+    --gold-dark: #96751a;
+    --black: #0b0b0d;
+    --black-soft: #1c1c1f;
+  }
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #eef2f7;
+    background: #f7f2e7;
     color: #1e293b;
     min-height: 100vh;
   }
 
   /* ── Header ── */
   header {
-    background: #0f2240;
+    background: var(--black);
     color: #fff;
     padding: 0 2rem;
     height: 56px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    border-bottom: 3px solid var(--gold);
   }
   header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .04em; }
-  header h1 span { color: #60a5fa; }
-  #refresh-info { font-size: .75rem; color: #94a3b8; }
+  header h1 span { color: var(--gold); }
+  #refresh-info { font-size: .75rem; color: #a1a1aa; }
 
   /* ── Layout ── */
   main { max-width: 1100px; margin: 0 auto; padding: 1.75rem 1.5rem 3rem; }
@@ -50,7 +59,7 @@
   .card.collected   { border-color: #22c55e; }
   .card.outstanding { border-color: #a855f7; }
   .card.pipeline    { border-color: #3b82f6; }
-  .card.total       { border-color: #0f2240; }
+  .card.total       { border-color: var(--gold); }
 
   .card-label {
     font-size: .7rem;
@@ -95,18 +104,41 @@
   }
   .filter-btn:hover { background: #f1f5f9; }
   .filter-btn.active {
-    background: #0f2240;
-    color: #fff;
-    border-color: #0f2240;
+    background: var(--black);
+    color: var(--gold);
+    border-color: var(--black);
   }
+
+  /* ── View tabs ── */
+  .view-tabs {
+    display: flex;
+    gap: .35rem;
+    margin-bottom: -1px;
+    position: relative;
+    z-index: 1;
+  }
+  .view-tab {
+    font-size: .78rem;
+    font-weight: 700;
+    padding: .5rem 1.1rem;
+    border-radius: 8px 8px 0 0;
+    border: 1.5px solid #e2e8f0;
+    border-bottom: none;
+    background: #e2e8f0;
+    color: #64748b;
+    cursor: pointer;
+  }
+  .view-tab.active { background: #fff; color: var(--black); box-shadow: inset 0 -3px 0 var(--gold); }
 
   /* ── Table ── */
   .table-wrap {
     background: #fff;
-    border-radius: 10px;
+    border-radius: 0 10px 10px 10px;
     box-shadow: 0 1px 4px rgba(0,0,0,.08);
     overflow: hidden;
+    display: none;
   }
+  .table-wrap.active { display: block; }
   table { width: 100%; border-collapse: collapse; font-size: .875rem; }
   thead { background: #f8fafc; }
   th {
@@ -127,9 +159,11 @@
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: #f8fafc; }
 
-  .client-name { font-weight: 600; color: #0f172a; }
-  .job-address { font-size: .75rem; color: #94a3b8; margin-top: .15rem; }
-  .job-notes   { font-size: .75rem; color: #94a3b8; margin-top: .15rem; font-style: italic; }
+  .client-name  { font-weight: 600; color: #0f172a; }
+  .job-id       { font-size: .7rem; color: #94a3b8; font-family: monospace; margin-top: .15rem; }
+  .job-address  { font-size: .75rem; color: #94a3b8; margin-top: .15rem; }
+  .job-notes    { font-size: .75rem; color: #94a3b8; margin-top: .15rem; font-style: italic; }
+  .job-lineitem-count { font-size: .72rem; color: var(--gold-dark); margin-top: .3rem; }
 
   /* ── Status badges ── */
   .badge {
@@ -141,13 +175,29 @@
     padding: .22rem .65rem;
     border-radius: 999px;
   }
-  .badge-scheduled    { background: #dbeafe; color: #1d4ed8; }
-  .badge-in-progress  { background: #fef3c7; color: #b45309; }
-  .badge-completed    { background: #cffafe; color: #0e7490; }
-  .badge-invoiced     { background: #f3e8ff; color: #7e22ce; }
-  .badge-paid         { background: #dcfce7; color: #15803d; }
+  .badge-estimate  { background: #fbf0d2; color: #8a6a12; }
+  .badge-scheduled { background: #dbeafe; color: #1d4ed8; }
+  .badge-completed { background: #cffafe; color: #0e7490; }
+  .badge-paid      { background: #dcfce7; color: #15803d; }
 
   .price { font-weight: 700; color: #0f172a; }
+
+  /* ── Row actions ── */
+  .actions-cell { white-space: nowrap; }
+  .action-btn {
+    font-size: .7rem;
+    font-weight: 600;
+    padding: .28rem .6rem;
+    border-radius: 6px;
+    border: 1.5px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    cursor: pointer;
+    margin-right: .3rem;
+  }
+  .action-btn:hover  { background: #f1f5f9; }
+  .action-btn.danger { border-color: #fca5a5; color: #b91c1c; }
+  .action-btn.danger:hover { background: #fef2f2; }
 
   /* ── Empty & error states ── */
   .empty-row td {
@@ -166,6 +216,328 @@
     padding: .75rem 1rem;
     font-size: .8rem;
     margin-bottom: 1rem;
+  }
+
+  /* ── New job form ── */
+  #new-job-form {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    padding: 1.2rem 1.4rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .form-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: .75rem;
+    align-items: end;
+  }
+
+  #new-job-form label,
+  .modal label {
+    display: block;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #64748b;
+    margin-bottom: .35rem;
+  }
+  #new-job-form input,
+  #new-job-form select,
+  .modal input,
+  .modal select {
+    width: 100%;
+    padding: .5rem .6rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: .85rem;
+    font-family: inherit;
+  }
+  #new-job-form input:focus,
+  #new-job-form select:focus,
+  .modal input:focus,
+  .modal select:focus { outline: none; border-color: var(--gold); }
+
+  #new-job-error {
+    display: none;
+    margin-top: .85rem;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+    border-radius: 6px;
+    padding: .5rem .75rem;
+    font-size: .78rem;
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+  }
+
+  button.primary,
+  #new-job-form button[type="submit"] {
+    padding: .55rem 1.2rem;
+    border: 1.5px solid var(--gold);
+    border-radius: 6px;
+    background: var(--black);
+    color: var(--gold);
+    font-size: .8rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s, color .15s;
+  }
+  button.primary:hover,
+  #new-job-form button[type="submit"]:hover { background: var(--gold); color: var(--black); }
+  button.primary:disabled,
+  #new-job-form button[type="submit"]:disabled { opacity: .6; cursor: not-allowed; }
+
+  /* ── Line items (bid / estimate) ── */
+  .line-items-section {
+    margin-top: 1.1rem;
+    padding-top: 1rem;
+    border-top: 1px dashed #d6cba8;
+  }
+  .line-items-title {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #64748b;
+    margin-bottom: .65rem;
+  }
+  .line-item-row {
+    display: grid;
+    grid-template-columns: 1fr 130px 32px;
+    gap: .5rem;
+    margin-bottom: .5rem;
+    align-items: center;
+  }
+  .line-item-row input {
+    width: 100%;
+    padding: .5rem .6rem;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: .85rem;
+    font-family: inherit;
+  }
+  .line-item-row input:focus { outline: none; border-color: var(--gold); }
+  .li-remove {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    border: 1.5px solid #fca5a5;
+    background: #fff;
+    color: #b91c1c;
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .li-remove:hover { background: #fef2f2; }
+
+  .line-items-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: .5rem;
+    flex-wrap: wrap;
+    gap: .5rem;
+  }
+  .add-line-item-btn {
+    font-size: .75rem;
+    font-weight: 700;
+    padding: .4rem .8rem;
+    border-radius: 6px;
+    border: 1.5px dashed var(--gold-dark);
+    background: #fffdf5;
+    color: var(--gold-dark);
+    cursor: pointer;
+  }
+  .add-line-item-btn:hover { background: #fbf0d2; }
+  .line-items-total {
+    font-size: .85rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .line-items-total span { color: var(--gold-dark); }
+
+  /* ── Schedule view ── */
+  #schedule-view {
+    display: none;
+    background: #fff;
+    border-radius: 0 10px 10px 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    padding: .25rem 1.25rem 1rem;
+  }
+  #schedule-view.active { display: block; }
+
+  .schedule-date-header {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #64748b;
+    padding: .9rem .1rem .4rem;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .schedule-date-header.today    { color: #1d4ed8; }
+  .schedule-date-header.overdue  { color: #b91c1c; }
+
+  .schedule-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: .7rem .1rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .schedule-item:last-child { border-bottom: none; }
+  .schedule-item-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+    min-width: 0;
+  }
+  .schedule-job-type { font-size: .75rem; color: #64748b; }
+  .schedule-empty { padding: 2.5rem; text-align: center; color: #94a3b8; font-size: .875rem; }
+
+  /* ── Modals (edit + invoice) ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, .55);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1rem;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1.5rem 1.75rem;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  }
+  .modal h3 { font-size: 1.05rem; margin-bottom: 1.1rem; }
+  .modal .field { margin-bottom: .85rem; }
+
+  .modal-actions {
+    display: flex;
+    gap: .6rem;
+    justify-content: flex-end;
+    margin-top: 1.2rem;
+  }
+  .modal-actions button {
+    padding: .55rem 1.2rem;
+    border: none;
+    border-radius: 6px;
+    font-size: .8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .modal-actions button.secondary { background: #f1f5f9; color: #475569; border: 1.5px solid transparent; }
+
+  #edit-error {
+    display: none;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+    border-radius: 6px;
+    padding: .5rem .75rem;
+    font-size: .78rem;
+    margin-bottom: .85rem;
+  }
+
+  /* ── Invoice ── */
+  .invoice-modal { max-width: 560px; }
+  .invoice-header {
+    background: var(--black);
+    color: #fff;
+    margin: -1.5rem -1.75rem 1.2rem;
+    padding: 1.1rem 1.75rem;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    border-bottom: 3px solid var(--gold);
+  }
+  .invoice-brand { font-size: 1.15rem; font-weight: 800; letter-spacing: .04em; }
+  .invoice-brand span { color: var(--gold); }
+  .invoice-brand-sub { font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin-top: .2rem; }
+  .invoice-title { font-size: .82rem; font-weight: 700; letter-spacing: .15em; color: var(--gold); }
+  .invoice-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: .8rem;
+    color: #475569;
+    margin-bottom: 1.1rem;
+  }
+  .invoice-section-label {
+    font-size: .68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #94a3b8;
+    margin-bottom: .3rem;
+  }
+  .invoice-bill-to { font-size: .85rem; margin-bottom: 1.2rem; line-height: 1.5; }
+  .invoice-bill-name { font-weight: 700; color: #0f172a; }
+
+  .invoice-work-completed { margin-bottom: 1.2rem; }
+  .invoice-work-completed ul { list-style: disc; padding-left: 1.2rem; font-size: .82rem; line-height: 1.6; color: #1e293b; }
+
+  .invoice-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-bottom: 1rem; }
+  .invoice-table th {
+    text-align: left;
+    padding: .5rem .6rem;
+    background: var(--black);
+    color: var(--gold);
+    font-size: .68rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  .invoice-table th:last-child, .invoice-table td:last-child { text-align: right; }
+  .invoice-table td { padding: .6rem .6rem; border-bottom: 1px solid #f1f5f9; }
+  .invoice-total {
+    text-align: right;
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: #0f172a;
+    padding: .6rem .3rem;
+    border-top: 2px solid var(--black);
+  }
+  .invoice-total span { color: var(--gold-dark); }
+  .invoice-footer {
+    text-align: center;
+    font-size: .78rem;
+    color: #475569;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e2e8f0;
+    line-height: 1.6;
+  }
+  .invoice-footer div:first-child { font-weight: 700; color: #0f172a; }
+
+  @media print {
+    body * { visibility: hidden; }
+    #invoice-modal, #invoice-modal * { visibility: visible; }
+    #invoice-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      max-width: none;
+      box-shadow: none;
+    }
+    .no-print { display: none !important; }
   }
 </style>
 </head>
@@ -186,12 +558,12 @@
     <div class="card outstanding">
       <div class="card-label">Outstanding</div>
       <div class="card-amount" id="c-outstanding">—</div>
-      <div class="card-sub" id="s-outstanding">invoiced + completed</div>
+      <div class="card-sub" id="s-outstanding">completed, awaiting payment</div>
     </div>
     <div class="card pipeline">
       <div class="card-label">Pipeline</div>
       <div class="card-amount" id="c-pipeline">—</div>
-      <div class="card-sub" id="s-pipeline">scheduled + in-progress</div>
+      <div class="card-sub" id="s-pipeline">estimates + scheduled</div>
     </div>
     <div class="card total">
       <div class="card-label">Total Value</div>
@@ -202,51 +574,275 @@
 
   <div id="error-banner"></div>
 
+  <form id="new-job-form">
+    <div class="form-fields-grid">
+      <div>
+        <label for="nj-client">Customer Name</label>
+        <input type="text" id="nj-client" name="client" required>
+      </div>
+      <div>
+        <label for="nj-phone">Phone</label>
+        <input type="tel" id="nj-phone" name="phone">
+      </div>
+      <div>
+        <label for="nj-address">Address</label>
+        <input type="text" id="nj-address" name="address" required>
+      </div>
+      <div>
+        <label for="nj-job-type">Job Type</label>
+        <input type="text" id="nj-job-type" name="jobType" required>
+      </div>
+      <div>
+        <label for="nj-date">Date</label>
+        <input type="date" id="nj-date" name="scheduledDate" required>
+      </div>
+      <div>
+        <label for="nj-status">Status</label>
+        <select id="nj-status" name="status">
+          <option value="estimate">Estimate</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="completed">Completed</option>
+          <option value="paid">Paid</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="line-items-section">
+      <div class="line-items-title">Bid / Estimate — Line Items</div>
+      <div id="nj-line-items"></div>
+      <div class="line-items-actions">
+        <button type="button" class="add-line-item-btn" id="nj-add-line-item">+ Add Line Item</button>
+        <div class="line-items-total">Total: <span id="nj-line-items-total">$0.00</span></div>
+      </div>
+    </div>
+
+    <div id="new-job-error"></div>
+    <div class="form-actions">
+      <button type="submit">Add Job</button>
+    </div>
+  </form>
+
   <div class="toolbar">
     <h2>Jobs</h2>
     <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="estimate">Estimate</button>
     <button class="filter-btn" data-filter="scheduled">Scheduled</button>
-    <button class="filter-btn" data-filter="in-progress">In Progress</button>
     <button class="filter-btn" data-filter="completed">Completed</button>
-    <button class="filter-btn" data-filter="invoiced">Invoiced</button>
     <button class="filter-btn" data-filter="paid">Paid</button>
   </div>
 
-  <div class="table-wrap">
+  <div class="view-tabs">
+    <button class="view-tab active" data-view="table">Job List</button>
+    <button class="view-tab" data-view="schedule">Schedule</button>
+  </div>
+
+  <div class="table-wrap active" id="table-view">
     <table>
       <thead>
         <tr>
           <th>Client</th>
+          <th>Phone</th>
           <th>Job Type</th>
           <th>Date</th>
           <th>Price</th>
           <th>Status</th>
-          <th>ID</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="job-table-body">
-        <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+        <tr class="empty-row"><td colspan="7">Loading…</td></tr>
       </tbody>
     </table>
   </div>
+
+  <div id="schedule-view">
+    <div id="schedule-list"></div>
+  </div>
 </main>
+
+<!-- Edit job modal -->
+<div class="modal-overlay" id="edit-overlay">
+  <div class="modal" id="edit-modal">
+    <h3>Edit Job</h3>
+    <div id="edit-error"></div>
+    <div class="field">
+      <label for="em-client">Customer Name</label>
+      <input type="text" id="em-client">
+    </div>
+    <div class="field">
+      <label for="em-phone">Phone</label>
+      <input type="tel" id="em-phone">
+    </div>
+    <div class="field">
+      <label for="em-address">Address</label>
+      <input type="text" id="em-address">
+    </div>
+    <div class="field">
+      <label for="em-job-type">Job Type</label>
+      <input type="text" id="em-job-type">
+    </div>
+    <div class="field">
+      <label for="em-date">Date</label>
+      <input type="date" id="em-date">
+    </div>
+    <div class="field">
+      <label for="em-status">Status</label>
+      <select id="em-status">
+        <option value="estimate">Estimate</option>
+        <option value="scheduled">Scheduled</option>
+        <option value="completed">Completed</option>
+        <option value="paid">Paid</option>
+      </select>
+    </div>
+
+    <div class="line-items-section">
+      <div class="line-items-title">Bid / Estimate — Line Items</div>
+      <div id="em-line-items"></div>
+      <div class="line-items-actions">
+        <button type="button" class="add-line-item-btn" id="em-add-line-item">+ Add Line Item</button>
+        <div class="line-items-total">Total: <span id="em-line-items-total">$0.00</span></div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="secondary" id="edit-cancel-btn">Cancel</button>
+      <button class="primary" id="edit-save-btn">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Invoice modal -->
+<div class="modal-overlay" id="invoice-overlay">
+  <div class="modal invoice-modal" id="invoice-modal">
+    <div class="invoice-header">
+      <div>
+        <div class="invoice-brand">PRO<span>FIX</span> Home Services</div>
+        <div class="invoice-brand-sub">Atlanta, GA</div>
+      </div>
+      <div class="invoice-title">INVOICE</div>
+    </div>
+    <div class="invoice-meta">
+      <div><strong>Invoice #:</strong> <span id="inv-id"></span></div>
+      <div><strong>Date:</strong> <span id="inv-date"></span></div>
+    </div>
+    <div class="invoice-bill-to">
+      <div class="invoice-section-label">Bill To</div>
+      <div id="inv-client" class="invoice-bill-name"></div>
+      <div id="inv-address"></div>
+      <div id="inv-phone"></div>
+    </div>
+    <div class="invoice-work-completed">
+      <div class="invoice-section-label">Work Completed</div>
+      <ul id="inv-work-list"></ul>
+    </div>
+    <table class="invoice-table">
+      <thead>
+        <tr><th>Description</th><th>Amount</th></tr>
+      </thead>
+      <tbody id="inv-line-items"></tbody>
+    </table>
+    <div class="invoice-total">Total Due: <span id="inv-total"></span></div>
+    <div class="invoice-footer">
+      <div>Corey White</div>
+      <div>(678) 310-5829</div>
+      <div>Payment Due Upon Receipt</div>
+    </div>
+    <div class="modal-actions no-print">
+      <button class="secondary" id="invoice-close-btn">Close</button>
+      <button class="primary" id="invoice-print-btn">Print</button>
+    </div>
+  </div>
+</div>
 
 <script>
   const fmt = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   let activeFilter = 'all';
+  let activeView   = 'table';
   let allJobs = [];
 
-  function badgeClass(status) {
-    return 'badge badge-' + status.replace('-', '-');
+  function esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
+
+  // ── Line item row helpers (shared by new-job form and edit modal) ──
+  function createLineItemRow(container, description = '', amount = '') {
+    const row = document.createElement('div');
+    row.className = 'line-item-row';
+    row.innerHTML = `
+      <input type="text" class="li-desc" placeholder="Description">
+      <input type="number" class="li-amount" placeholder="Amount" min="0" step="0.01">
+      <button type="button" class="li-remove" aria-label="Remove line item">&times;</button>
+    `;
+    row.querySelector('.li-desc').value   = description;
+    row.querySelector('.li-amount').value = amount;
+    container.appendChild(row);
+  }
+
+  // Reads all rows in a container. Returns null if any non-empty row is invalid,
+  // [] if there are no usable rows, or the cleaned array of { description, amount }.
+  function collectLineItems(containerId) {
+    const rows = document.querySelectorAll(`#${containerId} .line-item-row`);
+    const items = [];
+    for (const row of rows) {
+      const desc      = row.querySelector('.li-desc').value.trim();
+      const amountStr = row.querySelector('.li-amount').value;
+      if (!desc && amountStr === '') continue;
+      const amount = parseFloat(amountStr);
+      if (!desc || isNaN(amount) || amount < 0) return null;
+      items.push({ description: desc, amount });
+    }
+    return items;
+  }
+
+  function wireLineItems(containerId, addBtnId, totalId) {
+    const container = document.getElementById(containerId);
+    const addBtn    = document.getElementById(addBtnId);
+    const totalEl   = document.getElementById(totalId);
+
+    function updateTotal() {
+      const rows  = document.querySelectorAll(`#${containerId} .line-item-row`);
+      let total = 0;
+      rows.forEach(row => {
+        const amount = parseFloat(row.querySelector('.li-amount').value);
+        if (!isNaN(amount)) total += amount;
+      });
+      totalEl.textContent = fmt(total);
+    }
+
+    addBtn.addEventListener('click', () => {
+      createLineItemRow(container);
+      updateTotal();
+    });
+
+    container.addEventListener('input', updateTotal);
+    container.addEventListener('click', e => {
+      if (e.target.classList.contains('li-remove')) {
+        e.target.closest('.line-item-row').remove();
+        updateTotal();
+      }
+    });
+
+    return updateTotal;
+  }
+
+  const njUpdateTotal = wireLineItems('nj-line-items', 'nj-add-line-item', 'nj-line-items-total');
+  const emUpdateTotal = wireLineItems('em-line-items', 'em-add-line-item', 'em-line-items-total');
+
+  function resetNewJobLineItems() {
+    const container = document.getElementById('nj-line-items');
+    container.innerHTML = '';
+    createLineItemRow(container);
+    njUpdateTotal();
+  }
+  resetNewJobLineItems();
 
   function renderJobs(jobs) {
     const tbody = document.getElementById('job-table-body');
     const filtered = activeFilter === 'all' ? jobs : jobs.filter(j => j.status === activeFilter);
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No jobs${activeFilter !== 'all' ? ' with status "' + activeFilter + '"' : ''} found.</td></tr>`;
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="7">No jobs${activeFilter !== 'all' ? ' with status "' + activeFilter + '"' : ''} found.</td></tr>`;
       return;
     }
 
@@ -254,16 +850,59 @@
       <tr>
         <td>
           <div class="client-name">${esc(j.client)}</div>
-          <div class="job-address">${esc(j.address)}</div>
+          <div class="job-id">#${esc(j.id)}</div>
+          ${j.address ? `<div class="job-address">${esc(j.address)}</div>` : ''}
           ${j.notes ? `<div class="job-notes">${esc(j.notes)}</div>` : ''}
         </td>
+        <td>${j.phone ? esc(j.phone) : '—'}</td>
         <td>${esc(j.jobType)}</td>
         <td>${esc(j.scheduledDate)}</td>
-        <td class="price">${fmt(j.price)}</td>
+        <td class="price">
+          ${fmt(j.price)}
+          ${j.lineItems && j.lineItems.length ? `<div class="job-lineitem-count">${j.lineItems.length} line item${j.lineItems.length !== 1 ? 's' : ''}</div>` : ''}
+        </td>
         <td><span class="badge badge-${esc(j.status)}">${esc(j.status)}</span></td>
-        <td style="font-family:monospace;font-size:.75rem;color:#94a3b8">${esc(j.id)}</td>
+        <td class="actions-cell">
+          <button class="action-btn" data-action="edit" data-id="${esc(j.id)}">Edit</button>
+          <button class="action-btn" data-action="invoice" data-id="${esc(j.id)}">Invoice</button>
+          <button class="action-btn danger" data-action="delete" data-id="${esc(j.id)}">Delete</button>
+        </td>
       </tr>
     `).join('');
+  }
+
+  function renderSchedule(jobs) {
+    const container = document.getElementById('schedule-list');
+    const sorted = [...jobs].sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate));
+
+    if (sorted.length === 0) {
+      container.innerHTML = '<div class="schedule-empty">No jobs scheduled.</div>';
+      return;
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    let lastDate = null;
+    let html = '';
+
+    for (const j of sorted) {
+      if (j.scheduledDate !== lastDate) {
+        lastDate = j.scheduledDate;
+        const cls = lastDate < todayStr ? 'overdue' : (lastDate === todayStr ? 'today' : '');
+        const formatted = new Date(lastDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        const suffix = lastDate === todayStr ? ' · Today' : (lastDate < todayStr ? ' · Past' : '');
+        html += `<div class="schedule-date-header ${cls}">${formatted}${suffix}</div>`;
+      }
+      html += `
+        <div class="schedule-item">
+          <div class="schedule-item-main">
+            <span class="client-name">${esc(j.client)}</span>
+            <span class="schedule-job-type">${esc(j.jobType)}${j.phone ? ' · ' + esc(j.phone) : ''}</span>
+          </div>
+          <span class="badge badge-${esc(j.status)}">${esc(j.status)}</span>
+          <span class="price">${fmt(j.price)}</span>
+        </div>`;
+    }
+    container.innerHTML = html;
   }
 
   function renderRevenue(rev) {
@@ -275,10 +914,6 @@
     document.getElementById('s-pipeline').textContent    = rev.pipeline.count + ' job' + (rev.pipeline.count !== 1 ? 's' : '');
     document.getElementById('c-total').textContent       = fmt(rev.total);
     document.getElementById('s-total').textContent       = (rev.collected.count + rev.outstanding.count + rev.pipeline.count) + ' total jobs';
-  }
-
-  function esc(str) {
-    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
   function showError(msg) {
@@ -302,6 +937,7 @@
       const rev = await revRes.json();
       hideError();
       renderJobs(allJobs);
+      renderSchedule(allJobs);
       renderRevenue(rev);
       document.getElementById('refresh-info').textContent =
         'Last updated ' + new Date().toLocaleTimeString() + ' · auto-refreshes every 30s';
@@ -310,6 +946,58 @@
       document.getElementById('refresh-info').textContent = 'Connection lost';
     }
   }
+
+  // New job form
+  const newJobForm  = document.getElementById('new-job-form');
+  const newJobError = document.getElementById('new-job-error');
+
+  newJobForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    newJobError.style.display = 'none';
+
+    const client        = document.getElementById('nj-client').value.trim();
+    const phone         = document.getElementById('nj-phone').value.trim();
+    const address       = document.getElementById('nj-address').value.trim();
+    const jobType       = document.getElementById('nj-job-type').value.trim();
+    const scheduledDate = document.getElementById('nj-date').value;
+    const status        = document.getElementById('nj-status').value;
+    const lineItems     = collectLineItems('nj-line-items');
+
+    if (!client || !address || !jobType || !scheduledDate) {
+      newJobError.textContent = 'Please fill in all required fields.';
+      newJobError.style.display = 'block';
+      return;
+    }
+    if (lineItems === null) {
+      newJobError.textContent = 'Each line item needs a description and a non-negative amount.';
+      newJobError.style.display = 'block';
+      return;
+    }
+    if (lineItems.length === 0) {
+      newJobError.textContent = 'Add at least one line item for the bid/estimate.';
+      newJobError.style.display = 'block';
+      return;
+    }
+
+    const submitBtn = newJobForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    try {
+      const res = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client, phone, address, jobType, scheduledDate, status, lineItems }),
+      });
+      if (!res.ok) throw new Error('Server error');
+      newJobForm.reset();
+      resetNewJobLineItems();
+      await refresh();
+    } catch (e) {
+      newJobError.textContent = 'Could not create job. Is agent.js running?';
+      newJobError.style.display = 'block';
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
 
   // Filter buttons
   document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -320,6 +1008,146 @@
       renderJobs(allJobs);
     });
   });
+
+  // View tabs (Job List vs Schedule)
+  document.querySelectorAll('.view-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.view-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeView = btn.dataset.view;
+      document.getElementById('table-view').classList.toggle('active', activeView === 'table');
+      document.getElementById('schedule-view').classList.toggle('active', activeView === 'schedule');
+    });
+  });
+
+  // Row actions: edit / invoice / delete
+  document.getElementById('job-table-body').addEventListener('click', e => {
+    const btn = e.target.closest('.action-btn');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const job = allJobs.find(j => j.id === id);
+    if (!job) return;
+
+    if (btn.dataset.action === 'edit')    openEditModal(job);
+    if (btn.dataset.action === 'invoice') openInvoiceModal(job);
+    if (btn.dataset.action === 'delete')  deleteJob(job);
+  });
+
+  // ── Edit modal ──
+  const editOverlay = document.getElementById('edit-overlay');
+  const editError   = document.getElementById('edit-error');
+  let editingId = null;
+
+  function openEditModal(job) {
+    editingId = job.id;
+    editError.style.display = 'none';
+    document.getElementById('em-client').value   = job.client;
+    document.getElementById('em-phone').value    = job.phone || '';
+    document.getElementById('em-address').value  = job.address || '';
+    document.getElementById('em-job-type').value = job.jobType;
+    document.getElementById('em-date').value     = job.scheduledDate;
+    document.getElementById('em-status').value   = job.status;
+
+    const container = document.getElementById('em-line-items');
+    container.innerHTML = '';
+    const items = (job.lineItems && job.lineItems.length) ? job.lineItems : [{ description: job.jobType, amount: job.price }];
+    items.forEach(i => createLineItemRow(container, i.description, i.amount));
+    emUpdateTotal();
+
+    editOverlay.classList.add('open');
+  }
+
+  function closeEditModal() {
+    editOverlay.classList.remove('open');
+    editingId = null;
+  }
+
+  document.getElementById('edit-cancel-btn').addEventListener('click', closeEditModal);
+  editOverlay.addEventListener('click', e => { if (e.target === editOverlay) closeEditModal(); });
+
+  document.getElementById('edit-save-btn').addEventListener('click', async () => {
+    const client        = document.getElementById('em-client').value.trim();
+    const phone         = document.getElementById('em-phone').value.trim();
+    const address       = document.getElementById('em-address').value.trim();
+    const jobType       = document.getElementById('em-job-type').value.trim();
+    const scheduledDate = document.getElementById('em-date').value;
+    const status        = document.getElementById('em-status').value;
+    const lineItems     = collectLineItems('em-line-items');
+
+    if (!client || !address || !jobType || !scheduledDate) {
+      editError.textContent = 'Please fill in all required fields.';
+      editError.style.display = 'block';
+      return;
+    }
+    if (lineItems === null) {
+      editError.textContent = 'Each line item needs a description and a non-negative amount.';
+      editError.style.display = 'block';
+      return;
+    }
+    if (lineItems.length === 0) {
+      editError.textContent = 'Add at least one line item.';
+      editError.style.display = 'block';
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/jobs/${encodeURIComponent(editingId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ client, phone, address, jobType, scheduledDate, status, lineItems }),
+      });
+      if (!res.ok) throw new Error('Server error');
+      closeEditModal();
+      await refresh();
+    } catch (e) {
+      editError.textContent = 'Could not save changes. Is agent.js running?';
+      editError.style.display = 'block';
+    }
+  });
+
+  // ── Delete ──
+  async function deleteJob(job) {
+    if (!confirm(`Delete job for ${job.client} (${job.jobType})? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(`/api/jobs/${encodeURIComponent(job.id)}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Server error');
+      await refresh();
+    } catch (e) {
+      showError('Could not delete job. Is agent.js running?');
+    }
+  }
+
+  // ── Invoice modal ──
+  const invoiceOverlay = document.getElementById('invoice-overlay');
+
+  function openInvoiceModal(job) {
+    document.getElementById('inv-id').textContent      = job.id;
+    document.getElementById('inv-date').textContent    = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('inv-client').textContent  = job.client;
+    document.getElementById('inv-address').textContent = job.address || '';
+    document.getElementById('inv-phone').textContent   = job.phone || '';
+
+    const items = (job.lineItems && job.lineItems.length) ? job.lineItems : [{ description: job.jobType, amount: job.price }];
+
+    document.getElementById('inv-work-list').innerHTML = items.map(i => `<li>${esc(i.description)}</li>`).join('');
+
+    document.getElementById('inv-line-items').innerHTML = items.map(i => `
+      <tr><td>${esc(i.description)}</td><td>${fmt(i.amount)}</td></tr>
+    `).join('');
+
+    const total = items.reduce((a, i) => a + Number(i.amount), 0);
+    document.getElementById('inv-total').textContent = fmt(total);
+
+    invoiceOverlay.classList.add('open');
+  }
+
+  function closeInvoiceModal() {
+    invoiceOverlay.classList.remove('open');
+  }
+
+  document.getElementById('invoice-close-btn').addEventListener('click', closeInvoiceModal);
+  document.getElementById('invoice-print-btn').addEventListener('click', () => window.print());
+  invoiceOverlay.addEventListener('click', e => { if (e.target === invoiceOverlay) closeInvoiceModal(); });
 
   refresh();
   setInterval(refresh, 30_000);

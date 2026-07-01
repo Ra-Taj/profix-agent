@@ -37,10 +37,10 @@ Prompts you for:
 - Address
 - Job type (e.g. "Roof repair", "HVAC tune-up")
 - Scheduled date (`YYYY-MM-DD`)
-- Price
 - Notes (optional)
+- One or more bid/estimate line items (description + amount each — leave the description blank to stop adding items)
 
-Each job is assigned a random 8-character hex ID.
+Price is the sum of the line items. Each job is assigned a random 8-character hex ID.
 
 ---
 
@@ -48,10 +48,9 @@ Each job is assigned a random 8-character hex ID.
 
 ```
 node profix.js list
+node profix.js list estimate
 node profix.js list scheduled
-node profix.js list in-progress
 node profix.js list completed
-node profix.js list invoiced
 node profix.js list paid
 ```
 
@@ -68,7 +67,7 @@ node profix.js update a1b2c3d4
 Moves the job to the next stage in the workflow:
 
 ```
-scheduled → in-progress → completed → invoiced → paid
+estimate → scheduled → completed → paid
 ```
 
 Run this command once each time the job advances. Cannot go backwards.
@@ -100,8 +99,8 @@ Displays three buckets:
 | Bucket | Included statuses |
 |---|---|
 | Collected (paid) | `paid` |
-| Outstanding | `invoiced`, `completed` |
-| Open Pipeline | `scheduled`, `in-progress` |
+| Outstanding | `completed` |
+| Pipeline | `estimate`, `scheduled` |
 
 Also shows a total across all buckets.
 
@@ -120,7 +119,7 @@ Permanently removes the job from `jobs.json`. This cannot be undone.
 ## Status flow
 
 ```
-scheduled → in-progress → completed → invoiced → paid
+estimate → scheduled → completed → paid
 ```
 
 Use `node profix.js update <id>` to advance one step at a time.

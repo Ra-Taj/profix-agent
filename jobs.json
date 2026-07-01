@@ -1,1 +1,16 @@
-{ "jobs": [] }
+{
+  "jobs": [
+    {
+      "id": "849568f1",
+      "client": "Ben",
+      "phone": "404-392-9987",
+      "address": "",
+      "jobType": "handyman",
+      "scheduledDate": "2026-07-02",
+      "price": 200,
+      "notes": "",
+      "status": "scheduled",
+      "createdAt": "2026-07-01T21:10:45.353Z"
+    }
+  ]
+}

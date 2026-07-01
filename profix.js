@@ -6,16 +6,15 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const DATA_FILE = path.join(__dirname, 'jobs.json');
-const STATUS_ORDER = ['scheduled', 'in-progress', 'completed', 'invoiced', 'paid'];
+const STATUS_ORDER = ['estimate', 'scheduled', 'completed', 'paid'];
 
 const BOLD  = '\x1b[1m';
 const RESET = '\x1b[0m';
 const STATUS_COLORS = {
-  scheduled:    '\x1b[34m',
-  'in-progress':'\x1b[33m',
-  completed:    '\x1b[36m',
-  invoiced:     '\x1b[35m',
-  paid:         '\x1b[32m',
+  estimate:  '\x1b[33m',
+  scheduled: '\x1b[34m',
+  completed: '\x1b[36m',
+  paid:      '\x1b[32m',
 };
 
 function colorStatus(status) {
@@ -57,19 +56,33 @@ async function addJob() {
   const address       = await ask('Address:                  ');
   const jobType       = await ask('Job type:                 ');
   const scheduledDate = await ask('Scheduled date (YYYY-MM-DD): ');
-  const priceStr      = await ask('Price ($):                ');
   const notes         = await ask('Notes (optional):         ');
+
+  console.log(`\n${BOLD}Bid / estimate — line items${RESET} (leave description blank to finish)\n`);
+  const lineItems = [];
+  for (;;) {
+    const description = await ask(`  Line item ${lineItems.length + 1} description: `);
+    if (!description) break;
+    const amountStr = await ask(`  Line item ${lineItems.length + 1} amount ($):    `);
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount) || amount < 0) {
+      console.error('  Invalid amount — must be a non-negative number. Line item skipped.');
+      continue;
+    }
+    lineItems.push({ description, amount });
+  }
   close();
 
-  const price = parseFloat(priceStr);
-  if (isNaN(price) || price < 0) {
-    console.error('Invalid price — must be a non-negative number.');
-    process.exit(1);
-  }
   if (!client || !address || !jobType || !scheduledDate) {
     console.error('Client, address, job type, and date are required.');
     process.exit(1);
   }
+  if (lineItems.length === 0) {
+    console.error('At least one line item is required.');
+    process.exit(1);
+  }
+
+  const price = lineItems.reduce((a, i) => a + i.amount, 0);
 
   const data = loadJobs();
   const job = {
@@ -78,9 +91,10 @@ async function addJob() {
     address,
     jobType,
     scheduledDate,
+    lineItems,
     price,
     notes,
-    status: 'scheduled',
+    status: 'estimate',
     createdAt: new Date().toISOString(),
   };
   data.jobs.push(job);
@@ -112,7 +126,7 @@ function listJobs(statusFilter) {
     console.log(`\n  ${BOLD}[${job.id}]${RESET}  ${job.client}  —  ${job.jobType}`);
     console.log(`    Address:  ${job.address}`);
     console.log(`    Date:     ${job.scheduledDate}`);
-    console.log(`    Price:    $${job.price.toFixed(2)}`);
+    console.log(`    Price:    $${job.price.toFixed(2)}${job.lineItems ? `  (${job.lineItems.length} line item${job.lineItems.length !== 1 ? 's' : ''})` : ''}`);
     console.log(`    Status:   ${colorStatus(job.status)}`);
     if (job.notes) console.log(`    Notes:    ${job.notes}`);
   }
@@ -134,8 +148,8 @@ function updateJob(id) {
 
   const prev = job.status;
   job.status = STATUS_ORDER[idx + 1];
-  if (job.status === 'invoiced') job.invoicedAt = new Date().toISOString();
-  if (job.status === 'paid')     job.paidAt     = new Date().toISOString();
+  if (job.status === 'completed') job.completedAt = new Date().toISOString();
+  if (job.status === 'paid')      job.paidAt      = new Date().toISOString();
 
   saveJobs(data);
   console.log(`\nJob ${BOLD}${id}${RESET}  (${job.client}):  ${colorStatus(prev)} → ${colorStatus(job.status)}\n`);
@@ -146,14 +160,23 @@ function printInvoice(id) {
   const job  = data.jobs.find(j => j.id === id);
   if (!job) { console.error(`Job not found: ${id}`); process.exit(1); }
 
+  const items = (job.lineItems && job.lineItems.length) ? job.lineItems : [{ description: job.jobType, amount: job.price }];
+  const total = items.reduce((a, i) => a + i.amount, 0);
+
   const W    = 54;
   const dbl  = '═'.repeat(W);
-  const sng  = '─'.repeat(W);
+  const sng  = '─'.repeat(W - 1);
   const row  = (text) => `║ ${text.padEnd(W - 1)}║`;
   const sep  = `╠${dbl}╣`;
+  const amountRow = (desc, amount) => {
+    const amtStr = `$${amount.toFixed(2)}`;
+    const descPart = `  ${desc}`.slice(0, W - 2 - amtStr.length);
+    return row(descPart.padEnd(W - 1 - amtStr.length) + amtStr);
+  };
 
   console.log(`\n╔${dbl}╗`);
   console.log(row('  PROFIX HOME SERVICES'));
+  console.log(row('  Atlanta, GA'));
   console.log(row('  INVOICE'));
   console.log(sep);
   console.log(row(`  Invoice #:  ${job.id}`));
@@ -163,15 +186,14 @@ function printInvoice(id) {
   console.log(row(`  ${job.client}`));
   console.log(row(`  ${job.address}`));
   console.log(sep);
-  console.log(row('  SERVICE DETAILS'));
+  console.log(row('  WORK COMPLETED'));
+  for (const item of items) console.log(row(`  • ${item.description}`));
   console.log(`║ ${sng}║`);
-  console.log(row(`  Job Type:   ${job.jobType}`));
-  console.log(row(`  Scheduled:  ${job.scheduledDate}`));
-  console.log(row(`  Status:     ${job.status}`));
-  if (job.notes) console.log(row(`  Notes:      ${job.notes}`));
+  for (const item of items) console.log(amountRow(item.description, item.amount));
   console.log(sep);
-  console.log(row(`  AMOUNT DUE:  $${job.price.toFixed(2)}`));
-  console.log(`╚${dbl}╝\n`);
+  console.log(row(`  TOTAL DUE:  $${total.toFixed(2)}`));
+  console.log(`╚${dbl}╝`);
+  console.log('\n  Corey White  ·  (678) 310-5829  ·  Payment Due Upon Receipt\n');
 }
 
 function showRevenue() {
@@ -179,8 +201,8 @@ function showRevenue() {
   const { jobs }    = data;
 
   const paid        = jobs.filter(j => j.status === 'paid');
-  const outstanding = jobs.filter(j => ['invoiced', 'completed'].includes(j.status));
-  const pipeline    = jobs.filter(j => ['scheduled', 'in-progress'].includes(j.status));
+  const outstanding = jobs.filter(j => j.status === 'completed');
+  const pipeline    = jobs.filter(j => ['estimate', 'scheduled'].includes(j.status));
 
   const sum = arr => arr.reduce((acc, j) => acc + j.price, 0);
   const fmt = (n) => `$${n.toFixed(2)}`;
@@ -193,8 +215,8 @@ function showRevenue() {
   console.log(`${BOLD}  PROFIX REVENUE SUMMARY${RESET}`);
   console.log(`${'═'.repeat(50)}`);
   console.log(row('Collected (paid)',     '\x1b[32m', paid));
-  console.log(row('Outstanding',          '\x1b[35m', outstanding));
-  console.log(row('Open Pipeline',        '\x1b[34m', pipeline));
+  console.log(row('Outstanding (completed)', '\x1b[35m', outstanding));
+  console.log(row('Pipeline (estimate + scheduled)', '\x1b[34m', pipeline));
   console.log(`${'─'.repeat(50)}`);
   console.log(`  ${BOLD}Total Business Value${RESET}         ${fmt(total).padStart(12)}`);
   console.log(`${'═'.repeat(50)}\n`);
@@ -225,7 +247,7 @@ ${BOLD}ProFix Home Services — Job Manager${RESET}
     delete <id>          Remove a job permanently
 
   ${BOLD}Status flow:${RESET}
-    scheduled → in-progress → completed → invoiced → paid
+    estimate → scheduled → completed → paid
 `);
 }
 
