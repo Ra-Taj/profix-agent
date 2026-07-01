@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProFix — Dashboard</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #eef2f7;
+    color: #1e293b;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    background: #0f2240;
+    color: #fff;
+    padding: 0 2rem;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  header h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .04em; }
+  header h1 span { color: #60a5fa; }
+  #refresh-info { font-size: .75rem; color: #94a3b8; }
+
+  /* ── Layout ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 1.75rem 1.5rem 3rem; }
+
+  /* ── Revenue cards ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  @media (max-width: 700px) { .cards { grid-template-columns: 1fr 1fr; } }
+
+  .card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 1.2rem 1.4rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    border-top: 4px solid transparent;
+  }
+  .card.collected   { border-color: #22c55e; }
+  .card.outstanding { border-color: #a855f7; }
+  .card.pipeline    { border-color: #3b82f6; }
+  .card.total       { border-color: #0f2240; }
+
+  .card-label {
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #64748b;
+    margin-bottom: .4rem;
+  }
+  .card-amount {
+    font-size: 1.65rem;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+  }
+  .card-sub {
+    font-size: .72rem;
+    color: #94a3b8;
+    margin-top: .35rem;
+  }
+
+  /* ── Filters ── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .toolbar h2 { font-size: 1rem; font-weight: 700; margin-right: auto; }
+
+  .filter-btn {
+    font-size: .72rem;
+    font-weight: 600;
+    padding: .3rem .8rem;
+    border-radius: 999px;
+    border: 1.5px solid #cbd5e1;
+    background: #fff;
+    color: #475569;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .filter-btn:hover { background: #f1f5f9; }
+  .filter-btn.active {
+    background: #0f2240;
+    color: #fff;
+    border-color: #0f2240;
+  }
+
+  /* ── Table ── */
+  .table-wrap {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: .875rem; }
+  thead { background: #f8fafc; }
+  th {
+    text-align: left;
+    padding: .75rem 1rem;
+    font-size: .7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: #64748b;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  td {
+    padding: .85rem 1rem;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+
+  .client-name { font-weight: 600; color: #0f172a; }
+  .job-address { font-size: .75rem; color: #94a3b8; margin-top: .15rem; }
+  .job-notes   { font-size: .75rem; color: #94a3b8; margin-top: .15rem; font-style: italic; }
+
+  /* ── Status badges ── */
+  .badge {
+    display: inline-block;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    padding: .22rem .65rem;
+    border-radius: 999px;
+  }
+  .badge-scheduled    { background: #dbeafe; color: #1d4ed8; }
+  .badge-in-progress  { background: #fef3c7; color: #b45309; }
+  .badge-completed    { background: #cffafe; color: #0e7490; }
+  .badge-invoiced     { background: #f3e8ff; color: #7e22ce; }
+  .badge-paid         { background: #dcfce7; color: #15803d; }
+
+  .price { font-weight: 700; color: #0f172a; }
+
+  /* ── Empty & error states ── */
+  .empty-row td {
+    text-align: center;
+    padding: 3rem;
+    color: #94a3b8;
+    font-size: .875rem;
+  }
+
+  #error-banner {
+    display: none;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    color: #b91c1c;
+    border-radius: 8px;
+    padding: .75rem 1rem;
+    font-size: .8rem;
+    margin-bottom: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PRO<span>FIX</span> Home Services</h1>
+  <span id="refresh-info">Loading…</span>
+</header>
+
+<main>
+  <div class="cards">
+    <div class="card collected">
+      <div class="card-label">Collected</div>
+      <div class="card-amount" id="c-collected">—</div>
+      <div class="card-sub" id="s-collected">paid jobs</div>
+    </div>
+    <div class="card outstanding">
+      <div class="card-label">Outstanding</div>
+      <div class="card-amount" id="c-outstanding">—</div>
+      <div class="card-sub" id="s-outstanding">invoiced + completed</div>
+    </div>
+    <div class="card pipeline">
+      <div class="card-label">Pipeline</div>
+      <div class="card-amount" id="c-pipeline">—</div>
+      <div class="card-sub" id="s-pipeline">scheduled + in-progress</div>
+    </div>
+    <div class="card total">
+      <div class="card-label">Total Value</div>
+      <div class="card-amount" id="c-total">—</div>
+      <div class="card-sub" id="s-total">all jobs</div>
+    </div>
+  </div>
+
+  <div id="error-banner"></div>
+
+  <div class="toolbar">
+    <h2>Jobs</h2>
+    <button class="filter-btn active" data-filter="all">All</button>
+    <button class="filter-btn" data-filter="scheduled">Scheduled</button>
+    <button class="filter-btn" data-filter="in-progress">In Progress</button>
+    <button class="filter-btn" data-filter="completed">Completed</button>
+    <button class="filter-btn" data-filter="invoiced">Invoiced</button>
+    <button class="filter-btn" data-filter="paid">Paid</button>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Job Type</th>
+          <th>Date</th>
+          <th>Price</th>
+          <th>Status</th>
+          <th>ID</th>
+        </tr>
+      </thead>
+      <tbody id="job-table-body">
+        <tr class="empty-row"><td colspan="6">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+  const fmt = n => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  let activeFilter = 'all';
+  let allJobs = [];
+
+  function badgeClass(status) {
+    return 'badge badge-' + status.replace('-', '-');
+  }
+
+  function renderJobs(jobs) {
+    const tbody = document.getElementById('job-table-body');
+    const filtered = activeFilter === 'all' ? jobs : jobs.filter(j => j.status === activeFilter);
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="6">No jobs${activeFilter !== 'all' ? ' with status "' + activeFilter + '"' : ''} found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(j => `
+      <tr>
+        <td>
+          <div class="client-name">${esc(j.client)}</div>
+          <div class="job-address">${esc(j.address)}</div>
+          ${j.notes ? `<div class="job-notes">${esc(j.notes)}</div>` : ''}
+        </td>
+        <td>${esc(j.jobType)}</td>
+        <td>${esc(j.scheduledDate)}</td>
+        <td class="price">${fmt(j.price)}</td>
+        <td><span class="badge badge-${esc(j.status)}">${esc(j.status)}</span></td>
+        <td style="font-family:monospace;font-size:.75rem;color:#94a3b8">${esc(j.id)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function renderRevenue(rev) {
+    document.getElementById('c-collected').textContent   = fmt(rev.collected.amount);
+    document.getElementById('s-collected').textContent   = rev.collected.count + ' job' + (rev.collected.count !== 1 ? 's' : '');
+    document.getElementById('c-outstanding').textContent = fmt(rev.outstanding.amount);
+    document.getElementById('s-outstanding').textContent = rev.outstanding.count + ' job' + (rev.outstanding.count !== 1 ? 's' : '');
+    document.getElementById('c-pipeline').textContent    = fmt(rev.pipeline.amount);
+    document.getElementById('s-pipeline').textContent    = rev.pipeline.count + ' job' + (rev.pipeline.count !== 1 ? 's' : '');
+    document.getElementById('c-total').textContent       = fmt(rev.total);
+    document.getElementById('s-total').textContent       = (rev.collected.count + rev.outstanding.count + rev.pipeline.count) + ' total jobs';
+  }
+
+  function esc(str) {
+    return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function showError(msg) {
+    const b = document.getElementById('error-banner');
+    b.textContent = msg;
+    b.style.display = 'block';
+  }
+
+  function hideError() {
+    document.getElementById('error-banner').style.display = 'none';
+  }
+
+  async function refresh() {
+    try {
+      const [jobsRes, revRes] = await Promise.all([
+        fetch('/api/jobs'),
+        fetch('/api/revenue'),
+      ]);
+      if (!jobsRes.ok || !revRes.ok) throw new Error('Server error');
+      allJobs = await jobsRes.json();
+      const rev = await revRes.json();
+      hideError();
+      renderJobs(allJobs);
+      renderRevenue(rev);
+      document.getElementById('refresh-info').textContent =
+        'Last updated ' + new Date().toLocaleTimeString() + ' · auto-refreshes every 30s';
+    } catch (e) {
+      showError('Could not reach the ProFix server. Is agent.js running? (node agent.js)');
+      document.getElementById('refresh-info').textContent = 'Connection lost';
+    }
+  }
+
+  // Filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeFilter = btn.dataset.filter;
+      renderJobs(allJobs);
+    });
+  });
+
+  refresh();
+  setInterval(refresh, 30_000);
+</script>
+</body>
+</html>
